@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'node:16-eyeseye'
+            image 'node:16-bullseye'
         }
     }
 
@@ -108,7 +108,7 @@ pipeline {
     post {
         always {
             echo 'Pipeline execution completed'
-            archiveArtifacts artifacts: "${LOG_DIR}/**/*, ${REPORT_DIR}/**/*", allowEmptyArchive: true
+            archiveArtifacts artifacts: "${env.LOG_DIR}/**/*, ${env.REPORT_DIR}/**/*", allowEmptyArchive: true
             cleanWs()
         }
         success {
