@@ -6,7 +6,7 @@ pipeline {
                   -v /usr/bin/docker:/usr/bin/docker \
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   -v /var/jenkins_home/docker-certs-client:/certs/client:ro \
-                  --group-add $(stat -c "%g" /var/run/docker.sock)'
+                  --group-add 983'
 
         }
     }
