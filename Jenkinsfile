@@ -37,26 +37,24 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh '''
-                        
-                        echo "Updating system libraries for Snyk CLI compatibility..."
-            
-                        
-                        echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
-                        apt-get update && apt-get install -y libc6 libstdc++6
-                            
-                        echo "Installing Snyk CLI..."
-                        npm install -g snyk
 
+                        echo "Installing arm64-compatible Snyk CLI..."
+                        curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux-arm64
+                        chmod +x /usr/local/bin/snyk
+        
                         echo "Verifying Snyk installation..."
                         snyk --version
-
+        
                         echo "Authenticating with Snyk..."
                         snyk auth ${SNYK_TOKEN}
-
-                        echo " Running Snyk code scan..."
+        
+                        echo "Running Snyk code scan..."
                         snyk code test --severity-threshold=medium --json-file-output=snyk-code-results.json || true
-
+        
                         echo "Snyk code scan completed"
+
+                        
+                        
                     '''
                 }
             }
