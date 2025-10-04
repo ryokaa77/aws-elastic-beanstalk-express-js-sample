@@ -102,10 +102,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    echo "Building Docker image with tag: ${DOCKER_IMAGE_NAME}:latest"
-                    docker build -t ${DOCKER_IMAGE_NAME}:latest .
-                '''
+                script {
+                
+                    def appImage = docker.build("${DOCKER_IMAGE_NAME}:latest")
+                }
             }
         }
 
