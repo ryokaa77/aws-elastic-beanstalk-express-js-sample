@@ -1,7 +1,7 @@
 # Use official Node.js 16 runtime as base image
 FROM node:16-bullseye
 
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y docker.io && docker --version
 
 USER root
 
