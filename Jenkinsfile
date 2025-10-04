@@ -114,21 +114,16 @@ pipeline {
         }
         
         stage('Build Docker Image') {
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
             steps {
                 script {
                     def imageTag = "${env.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
                     def latestTag = "${env.DOCKER_IMAGE_NAME}:latest"
                     
                     echo "Building Docker image with tag: ${imageTag}"
+                    docker .build(imageTag)
+
                     
                     sh """
-                        docker build -t ${imageTag} .
                         docker tag ${imageTag} ${latestTag}
                         echo "Docker image build completed"
                     """
@@ -176,12 +171,7 @@ pipeline {
             when {
                 branch 'main'
             }
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
+            
             steps {
                 script {
                     def imageTag = "${env.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
