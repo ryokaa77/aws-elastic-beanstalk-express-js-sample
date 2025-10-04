@@ -42,7 +42,7 @@ pipeline {
 
         stage('Snyk Code Scan') {
             steps {
-                withCredentials([string(credentialsId: 'SNYK_TOKEN', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh '''
                         echo "Installing arm64-compatible Snyk CLI..."
                         curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux-arm64
@@ -76,7 +76,7 @@ pipeline {
 
         stage('Snyk Dependency Scan') {
             steps {
-                withCredentials([string(credentialsId: 'SNYK_TOKEN', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh '''
                         echo "Running Snyk dependency scan..."
                         apt-get update && apt-get install -y libc6 libstdc++6
