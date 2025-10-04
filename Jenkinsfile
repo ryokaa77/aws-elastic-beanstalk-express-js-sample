@@ -113,7 +113,7 @@ pipeline {
                         ~/snyk code test --json > ${REPORT_DIR}/code-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
                         jq -r '
                             .vulnerabilities | group_by(.severity) | map({(.[0].severity): length}) | add
-                            | "Crit: \\\(.critical//0) | High: \\\(.high//0) | Med: \\\(.medium//0) | Low: \\\(.low//0) | Total: \\\((.critical//0)+(.high//0)+(.medium//0)+(.low//0))"
+                            | "Crit: \(.critical//0) | High: \(.high//0) | Med: \\\(.medium//0) | Low: \(.low//0) | Total: \((.critical//0)+(.high//0)+(.medium//0)+(.low//0))"
                         ' ${REPORT_DIR}/code-report.json | tee -a ${LOG_DIR}/snyk.log
         
                       
@@ -124,7 +124,7 @@ pipeline {
                         ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
                         jq -r '
                             .vulnerabilities | group_by(.severity) | map({(.[0].severity): length}) | add
-                            | "Crit: \\\(.critical//0) | High: \\\(.high//0) | Med: \\\(.medium//0) | Total: \\\((.critical//0)+(.high//0)+(.medium//0))"
+                            | "Crit: \(.critical//0) | High: \(.high//0) | Med: \(.medium//0) | Total: \((.critical//0)+(.high//0)+(.medium//0))"
                         ' ${REPORT_DIR}/dep-report.json | tee -a ${LOG_DIR}/snyk.log
         
                         echo -e "\\n=== Snyk Scan Done ===" | tee -a ${LOG_DIR}/snyk.log
