@@ -77,7 +77,7 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            agent { label 'docker' } 
+            agent { label 'master' } 
             steps {
                 sh """
                     mkdir -p ${LOG_DIR}
@@ -90,7 +90,7 @@ pipeline {
         }
 
         stage('Push to Registry') {
-            agent { label 'docker' }
+            agent { label 'master' }
             steps {
                 sh """
                     mkdir -p ${LOG_DIR}
