@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'my-node-16-docker:lastest'
+            image 'my-node-16-docker:latest'
         }
     }
 
