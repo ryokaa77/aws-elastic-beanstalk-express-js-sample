@@ -82,8 +82,6 @@ pipeline {
                         echo "Updating system libraries for Snyk CLI compatibility..."
                         apt-get update && apt-get install -y libc6 libstdc++6
                             
-                        echo "Installing Snyk CLI..."
-                        npm install -g snyk
 
                         echo "Authenticating with Snyk..."
                         snyk auth $SNYK_TOKEN
