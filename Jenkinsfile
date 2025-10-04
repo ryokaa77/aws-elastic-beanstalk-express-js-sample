@@ -4,7 +4,8 @@ pipeline {
             image 'node:16-bullseye'
             args '-u root:root \
               -v /var/jenkins_home/docker-certs-client:/certs/client:ro \
-              -v /usr/bin/docker:/usr/bin/docker'
+              -v /usr/bin/docker:/usr/bin/docker \
+              -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
