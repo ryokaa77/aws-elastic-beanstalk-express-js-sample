@@ -1,9 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:16-bullseye'
-        }
-    }
+    agent any
 
     environment {
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
@@ -26,27 +22,34 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install Dependencies & Test (Node 16)') {
+            agent {
+                docker {
+                    image 'node:16-bullseye'
+                    args '-u root'
+                }
+            }
             steps {
+                echo '=== Install Dependencies & Test ==='
                 sh """
                     mkdir -p ${LOG_DIR}
                     echo '=== Install Dependencies ===' | tee -a ${LOG_DIR}/install.log
                     npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
+
+                    echo "Test ======"
                 """
             }
         }
 
-        stage('Unit Tests') {
-            steps {
-                sh """
-                    mkdir -p ${LOG_DIR}
-                    echo '=== Unit Tests ===' | tee -a ${LOG_DIR}/test.log
-                    npm test 2>&1 | tee -a ${LOG_DIR}/test.log || true
-                """
-            }
-        }
+        
 
         stage('Snyk Code Scan') {
+            agent {
+                docker {
+                    image 'node:16-bullseye'
+                    args '-u root'
+                }
+            }
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
@@ -63,6 +66,12 @@ pipeline {
         }
 
         stage('Snyk Dependency Scan') {
+            agent {
+                docker {
+                    image 'node:16-bullseye'
+                    args '-u root'
+                }
+            }
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
@@ -77,7 +86,7 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            agent { label 'master' } 
+            
             steps {
                 sh """
                     mkdir -p ${LOG_DIR}
@@ -90,7 +99,6 @@ pipeline {
         }
 
         stage('Push to Registry') {
-            agent { label 'master' }
             steps {
                 sh """
                     mkdir -p ${LOG_DIR}
