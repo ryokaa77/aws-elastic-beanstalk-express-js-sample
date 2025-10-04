@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        timestamps()
+    }
+
     environment {
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
         DOCKER_REGISTRY = 'docker.io'
@@ -9,8 +13,7 @@ pipeline {
         LOG_DIR = 'logs'
         REPORT_DIR = 'reports'
         DOCKER_TAG_LATEST = "${DOCKER_IMAGE_NAME}:latest"
-        DOCKER_TAG_BUILD = "${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}" // Jenkins 构建号
-    }
+        DOCKER_TAG_BUILD = "${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}" 
 
     stages {
         stage('Prepare Workspace') {
@@ -18,23 +21,23 @@ pipeline {
                 sh """
                     mkdir -p ${LOG_DIR} ${REPORT_DIR}
                     echo '=== Workspace Prepared ===' | tee -a ${LOG_DIR}/pipeline.log
+
+                    echo '=== Git Information ===' | tee -a ${LOG_DIR}/checkout.log
+                    echo "Branch: ${GIT_BRANCH}" | tee -a ${LOG_DIR}/checkout.log
+                    echo "Commit: ${GIT_COMMIT}" | tee -a ${LOG_DIR}/checkout.log
+                    git log -1 --pretty=format:'%h - %an, %ar : %s' | tee -a ${LOG_DIR}/checkout.log
                 """
             }
         }
 
-        stage('Checkout') {
-            steps {
-                sh """
-                    echo '=== Checkout ===' | tee -a ${LOG_DIR}/checkout.log
-                    git checkout ${GIT_BRANCH} 2>&1 | tee -a ${LOG_DIR}/checkout.log
-                    git log -1 --pretty=oneline | tee -a ${LOG_DIR}/checkout.log
-                """
-            }
-        }
 
         stage('Install & Test') {
             agent {
-                docker { image 'node:16-bullseye' } 
+                docker { 
+                    image 'node:16-bullseye' 
+                    reuseNode true
+                       
+                } 
             }
             steps {
                 sh """
@@ -54,27 +57,47 @@ pipeline {
 
         stage('Snyk Scan') {
             agent {
-                docker { image 'node:16-bullseye' }
+                docker { 
+                    image 'node:16-bullseye'
+                    reuseNode true
+                }
             }
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
                         set -e
-                        echo '=== Snyk Setup ===' | tee -a ${LOG_DIR}/snyk.log
-                        apt-get update && apt-get install -y curl 2>&1 | tee -a ${LOG_DIR}/snyk.log
+                        echo '=== Snyk Setup ==='
+                        apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
+                        
                         ARCH=\$(uname -m)
-                        [ "\$ARCH" = "x86_64" ] && SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux || SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux-arm64
+                        if [ "$ARCH" = "x86_64" ]; then
+                            SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux
+                        else
+                            SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux-arm64
+                        fi
+                        
                         curl -Lo ~/snyk \$SNYK_URL
                         chmod +x ~/snyk
-                        ~/snyk --version | tee -a ${LOG_DIR}/snyk.log
-                        ~/snyk auth \$SNYK_TOKEN | tee -a ${LOG_DIR}/snyk.log
+                        ~/snyk --version > /dev/null
+                        
+                        ~/snyk auth \$SNYK_TOKEN > /dev/null
 
-                        echo '=== Snyk Code Test ===' | tee -a ${LOG_DIR}/snyk.log
-                        ~/snyk code test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-code-results.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
-
-                        echo '=== Snyk Dependency Test ===' | tee -a ${LOG_DIR}/snyk.log
-                        npm install --save 2>&1 | tee -a ${LOG_DIR}/snyk.log
-                        ~/snyk test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
+                        # -------------------------
+                        # Snyk Code Test
+                        # -------------------------
+                        ~/snyk code test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-code-results.json 2>&1 | tee ${LOG_DIR}/snyk-code.log || true
+        
+                        echo "=== Snyk Code Test Summary ==="
+                        jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-code-results.json || echo "No vulnerabilities found"
+        
+                        # -------------------------
+                        # Snyk Dependency Test
+                        # -------------------------
+                        npm install --quiet --no-progress
+                        ~/snyk test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-report.json 2>&1 | tee ${LOG_DIR}/snyk-dependency.log || true
+        
+                        echo "=== Snyk Dependency Test Summary ==="
+                        jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-report.json || echo "No vulnerabilities found"
                     """
                 }
             }
@@ -98,7 +121,7 @@ pipeline {
                         sh """
                             set -e
                             echo '=== Docker Push ===' | tee -a ${LOG_DIR}/docker.log
-                            docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS} 2>&1 | tee -a ${LOG_DIR}/docker.log
+                            echo "\${DOCKER_PASS}" | docker login ${DOCKER_REGISTRY} -u "\${DOCKER_USER}" --password-stdin 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker push ${DOCKER_TAG_LATEST} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker push ${DOCKER_TAG_BUILD} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker logout ${DOCKER_REGISTRY} 2>&1 | tee -a ${LOG_DIR}/docker.log
@@ -112,7 +135,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed'
+            echo "Build completed in ${currentBuild.durationString}"
             archiveArtifacts artifacts: "${LOG_DIR}/**/*, ${REPORT_DIR}/**/*", allowEmptyArchive: true
             cleanWs()
         }
