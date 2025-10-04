@@ -116,7 +116,7 @@ pipeline {
                     def latestTag = "${env.DOCKER_IMAGE_NAME}:latest"
                     
                     echo "Building Docker image with tag: ${imageTag}"
-                    docker .build(imageTag)
+                    docker.build(imageTag)
 
                     
                     sh """
