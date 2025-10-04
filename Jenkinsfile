@@ -35,7 +35,7 @@ pipeline {
         }
 
 
-        stage('Install & Test') {
+        stage('Install & Test & Docker Build') {
             agent {
                 docker { 
                     // image 'node:16-bullseye' 
@@ -49,6 +49,11 @@ pipeline {
             steps {
                 sh """
                     set -e
+
+                    echo '=== Node Version ===' | tee -a ${LOG_DIR}/install.log
+                    node -v
+                    npm -v
+                    
                     echo '=== Install Dependencies ===' | tee -a ${LOG_DIR}/install.log
                     npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
 
@@ -59,8 +64,10 @@ pipeline {
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
 
-                    echo '=== Checking Docker ===' | tee -a ${LOG_DIR}/docker.log
-                    docker version | tee -a ${LOG_DIR}/docker.log
+                    echo '=== Install Docker CLI ===' | tee -a ${LOG_DIR}/docker.log
+                    apt-get update -qq && apt-get install -y -qq docker.io
+                    docker --version | tee -a ${LOG_DIR}/docker.log
+
 
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
                     docker build -t ${DOCKER_TAG_BUILD} -t ${DOCKER_TAG_LATEST} . 2>&1 | tee -a ${LOG_DIR}/docker.log
