@@ -36,12 +36,15 @@ pipeline {
                     echo '=== Install Dependencies ===' | tee -a ${LOG_DIR}/install.log
                     npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
 
-                    echo "Test ======"
+                    echo '=== Run Tests ===' | tee -a ${LOG_DIR}/test.log
+                    if npm run test -- --help > /dev/null 2>&1; then
+                        npm test 2>&1 | tee -a ${LOG_DIR}/test.log
+                    else
+                        echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
+                    fi
                 """
             }
         }
-
-        
 
         stage('Snyk Code Scan') {
             agent {
@@ -55,7 +58,16 @@ pipeline {
                     sh """
                         mkdir -p ${LOG_DIR} ${REPORT_DIR}
                         echo '=== Snyk Code Scan ===' | tee -a ${LOG_DIR}/snyk-code.log
-                        curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux-arm64
+
+                        ARCH=\$(uname -m)
+                        echo "Container architecture: \$ARCH" | tee -a ${LOG_DIR}/snyk-code.log
+
+                        if [ "\$ARCH" = "x86_64" ]; then
+                            curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux
+                        else
+                            curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux-arm64
+                        fi
+
                         chmod +x /usr/local/bin/snyk
                         snyk --version | tee -a ${LOG_DIR}/snyk-code.log
                         snyk auth \$SNYK_TOKEN | tee -a ${LOG_DIR}/snyk-code.log
@@ -86,7 +98,6 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            
             steps {
                 sh """
                     mkdir -p ${LOG_DIR}
