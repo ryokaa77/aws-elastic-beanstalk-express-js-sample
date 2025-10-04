@@ -93,7 +93,7 @@ pipeline {
                         apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
                         
                         ARCH=\$(uname -m)
-                        if [ "$ARCH" = "x86_64" ]; then
+                        if [ "\$ARCH" = "x86_64" ]; then
                             SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux
                         else
                             SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux-arm64
