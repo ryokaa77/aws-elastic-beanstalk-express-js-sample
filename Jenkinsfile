@@ -119,8 +119,8 @@ pipeline {
                             | .high = (.high // 0)
                             | .medium = (.medium // 0)
                             | .low = (.low // 0)
-                            | "Critical: \\\(.critical) | High: \\\(.high) | Medium: \\\(.medium) | Low: \\\(.low)",
-                              "Total vulnerabilities: \\\(.critical + .high + .medium + .low)"
+                            | "Critical: \\(.critical) | High: \\(.high) | Medium: \\(.medium) | Low: \\(.low)",
+                              "Total vulnerabilities: \\(.critical + .high + .medium + .low)"
                         ' ${REPORT_DIR}/snyk-code-report.json | tee -a ${LOG_DIR}/snyk-scan.log
         
                         # --------------------------
@@ -138,8 +138,8 @@ pipeline {
                             | .critical = (.critical // 0)
                             | .high = (.high // 0)
                             | .medium = (.medium // 0)
-                            | "Critical: \\\(.critical) | High: \\\(.high) | Medium: \\\(.medium)",
-                              "Total (Medium+): \\\(.critical + .high + .medium)"
+                            | "Critical: \\(.critical) | High: \\(.high) | Medium: \\(.medium)",
+                              "Total (Medium+): \\(.critical + .high + .medium)"
                         ' ${REPORT_DIR}/snyk-dep-report.json | tee -a ${LOG_DIR}/snyk-scan.log
         
                         echo -e "\\n=== Snyk Scans Completed ===" | tee -a ${LOG_DIR}/snyk-scan.log
