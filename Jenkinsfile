@@ -2,7 +2,9 @@ pipeline {
     agent {
         docker {
             image 'node:16-bullseye'
-            args '-u root:root -v /var/jenkins_home/docker-certs-client:/certs/client:ro'
+            args '-u root:root \
+              -v /var/jenkins_home/docker-certs-client:/certs/client:ro \
+              -v /usr/bin/docker:/usr/bin/docker'
         }
     }
 
