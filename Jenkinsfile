@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:16-bullseye'
-
-        }
-    }
+    agent any
 
     environment {
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
