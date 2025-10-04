@@ -129,6 +129,20 @@ pipeline {
             steps {
                 sh """
                     set -e
+                    echo '=== Install Docker Client in Node Container ===' | tee -a ${LOG_DIR}/docker.log
+                    apt-get update -qq && apt-get install -y -qq curl lsb-release software-properties-common > /dev/null 2>&1
+                    
+                    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg > /dev/null 2>&1
+                    
+                    echo "deb [arch=amd64] https://download.docker.com/linux/debian ${DOCKER_DEB_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list
+                    
+                    apt-get update -qq && apt-get install -y -qq docker-ce-cli > /dev/null 2>&1
+
+                    # 验证Docker客户端安装成功
+                    echo '=== Docker version ===' | tee -a ${LOG_DIR}/docker.log
+                    docker --version | tee -a ${LOG_DIR}/docker.log
+
+                    
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
                     docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
                     echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
