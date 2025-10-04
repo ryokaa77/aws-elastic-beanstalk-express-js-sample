@@ -98,7 +98,12 @@ pipeline {
         
                         # Download Snyk CLI (architecture-aware)
                         ARCH=\$(uname -m)
-                        SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux\${ARCH == "aarch64" ? "-arm64" : ""}"
+                        if [ "\$ARCH" = "aarch64" ]; then
+                            SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux-arm64"
+                        else
+                            SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux"
+                        fi
+                        
                         curl -fsSL -o ~/snyk \$SNYK_URL
                         chmod +x ~/snyk
                         ~/snyk auth \$SNYK_TOKEN > /dev/null 2>&1
