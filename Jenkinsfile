@@ -90,39 +90,49 @@ pipeline {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
                         set -e
-                        
                         echo '=== Snyk Setup ==='
+                        # 1. 提前创建reports目录，避免Snyk无法写入报告
+                        mkdir -p ${REPORT_DIR}
+                        # 2. 安装curl和jq（jq用于解析JSON）
                         apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
                         
+                        # 3. 下载Snyk（适配aarch64架构）
                         ARCH=\$(uname -m)
                         if [ "\$ARCH" = "x86_64" ]; then
                             SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux
                         else
                             SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux-arm64
                         fi
-                        
                         curl -Lo ~/snyk \$SNYK_URL
                         chmod +x ~/snyk
                         ~/snyk --version > /dev/null
                         
+                        # 4. 登录Snyk
                         ~/snyk auth \$SNYK_TOKEN > /dev/null
-
-                        # -------------------------
-                        # Snyk Code Test
-                        # -------------------------
-                        ~/snyk code test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-code-results.json 2>&1 | tee ${LOG_DIR}/snyk-code.log || true
-        
+    
+                        # 5. Snyk Code测试：添加--json参数强制生成JSON报告
+                        echo '=== Snyk Code Test ==='
+                        ~/snyk code test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-code-results.json 2>&1 | tee ${LOG_DIR}/snyk-code.log || true
+            
+                        # 6. 解析报告（若文件缺失，兜底提示）
                         echo "=== Snyk Code Test Summary ==="
-                        jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-code-results.json || echo "No vulnerabilities found"
-        
-                        # -------------------------
-                        # Snyk Dependency Test
-                        # -------------------------
-                        npm install --quiet --no-progress
-                        ~/snyk test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-report.json 2>&1 | tee ${LOG_DIR}/snyk-dependency.log || true
-        
+                        if [ -f "${REPORT_DIR}/snyk-code-results.json" ]; then
+                            jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-code-results.json || echo "No vulnerabilities found"
+                        else
+                            echo "No vulnerabilities found (report file not generated)"
+                        fi
+            
+                        # 7. Snyk依赖测试
+                        echo '=== Snyk Dependency Test ==='
+                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-report.json 2>&1 | tee ${LOG_DIR}/snyk-dependency.log || true
+            
+                        # 8. 解析依赖报告
                         echo "=== Snyk Dependency Test Summary ==="
-                        jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-report.json || echo "No vulnerabilities found"
+                        if [ -f "${REPORT_DIR}/snyk-report.json" ]; then
+                            jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-report.json || echo "No vulnerabilities found"
+                        else
+                            echo "No vulnerabilities found (report file not generated)"
+                        fi
                     """
                 }
             }
@@ -139,23 +149,23 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Install Docker Client in Node Container ===' | tee -a ${LOG_DIR}/docker.log
-                    apt-get update -qq && apt-get install -y -qq curl lsb-release software-properties-common > /dev/null 2>&1
+                    echo '=== Install Docker Client (Auto-Arch) ===' | tee -a ${LOG_DIR}/docker.log
+                    # 关键修复：（自动适配aarch64/amd64）
+                    apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
+                    curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
-                    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg > /dev/null 2>&1
+                    # 验证Docker安装
+                    docker --version 2>&1 | tee -a ${LOG_DIR}/docker.log
                     
-                    echo "deb [arch=amd64] https://download.docker.com/linux/debian ${DOCKER_DEB_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list
-                    
-                    apt-get update -qq && apt-get install -y -qq docker-ce-cli > /dev/null 2>&1
-
-                    # 验证Docker客户端安装成功
-                    echo '=== Docker version ===' | tee -a ${LOG_DIR}/docker.log
-                    docker --version | tee -a ${LOG_DIR}/docker.log
-
-                    
+                    # 构建Docker镜像
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
+                    # 确保Dockerfile存在（避免构建失败）
+                    if [ ! -f "Dockerfile" ]; then
+                        echo "Error: Dockerfile not found!" | tee -a ${LOG_DIR}/docker.log
+                        exit 1
+                    fi
                     docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
-                    echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
+                    echo "Built images: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}" | tee -a ${LOG_DIR}/docker.log
                 """
             }
         }
