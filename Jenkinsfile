@@ -17,6 +17,7 @@ pipeline {
         REPORT_DIR = 'reports'
         DOCKER_TAG_LATEST = "${DOCKER_IMAGE_NAME}:latest"
         DOCKER_TAG_BUILD = "${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}" 
+        DOCKER_DEB_CODENAME = 'bullseye'
     }
 
     stages {
@@ -89,8 +90,9 @@ pipeline {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
                         set -e
+                        
                         echo '=== Snyk Setup ==='
-                        apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
+                        apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
                         
                         ARCH=\$(uname -m)
                         if [ "\$ARCH" = "x86_64" ]; then
