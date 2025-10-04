@@ -3,9 +3,11 @@ pipeline {
         docker {
             image 'node:16-bullseye'
             args '-u root:root \
-              -v /var/jenkins_home/docker-certs-client:/certs/client:ro \
-              -v /usr/bin/docker:/usr/bin/docker \
-              -v /var/run/docker.sock:/var/run/docker.sock'
+                  -v /usr/bin/docker:/usr/bin/docker \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  -v /var/jenkins_home/docker-certs-client:/certs/client:ro \
+                  --group-add $(stat -c "%g" /var/run/docker.sock)'
+
         }
     }
 
