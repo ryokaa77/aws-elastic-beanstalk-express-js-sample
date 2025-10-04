@@ -1,5 +1,9 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'my-node-16-docker:lastest'
+        }
+    }
 
     environment {
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
