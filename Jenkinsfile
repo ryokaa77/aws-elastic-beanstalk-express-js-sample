@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'node:16-bullseye'
+            image 'docker:24.0.2-cli-node16'
         }
     }
 
