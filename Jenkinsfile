@@ -61,15 +61,16 @@ pipeline {
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
 
-                    # 关键新增：在node容器内安装Docker客户端
-                    echo '=== Install Docker Client ===' | tee -a logs/docker.log
-                    apt-get update -qq && apt-get install -y -qq curl lsb-release software-properties-common > /dev/null 2>&1
-                    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg > /dev/null 2>&1
-                    echo "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list
-                    apt-get update -qq && apt-get install -y -qq docker-ce-cli > /dev/null 2>&1
+                    # 3. 关键修改：用Docker官方脚本安装客户端（替代手动源配置）
+                    echo '=== Install Docker Client via Official Script ===' | tee -a logs/docker.log
+                    # 安装curl（确保容器内有curl工具）
+                    apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
+                    # 下载并执行官方脚本，--client-only仅安装客户端（不装守护进程）
+                    curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
+                    # 4. 验证Docker安装
                     echo '=== Docker version ===' | tee -a logs/docker.log
-                    docker --version | tee -a logs/docker.log
+                    docker --version 2>&1 | tee -a logs/docker.log
 
 
                 """
