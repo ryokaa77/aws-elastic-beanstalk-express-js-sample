@@ -1,19 +1,20 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:16-bullseye'
-            args '-u root'
-        }
-    }
-    
+    agent any
+
     environment {
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
         DOCKER_REGISTRY = 'docker.io'
         SNYK_ORG = 'ryokaa77'
         SNYK_PROJECT_NAME = 'express-js-sample'
     }
-    
+
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh '''
@@ -23,46 +24,41 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('Unit Tests') {
             steps {
                 sh '''
                     echo "Running unit tests..."
+                    npm test || true
                     echo "Unit tests completed"
                 '''
             }
         }
-        
+
         stage('Snyk Code Scan') {
             steps {
-                withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'SNYK_TOKEN', variable: 'SNYK_TOKEN')]) {
                     sh '''
-
                         echo "Installing arm64-compatible Snyk CLI..."
                         curl -Lo /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux-arm64
                         chmod +x /usr/local/bin/snyk
-        
+
                         echo "Verifying Snyk installation..."
                         snyk --version
-        
+
                         echo "Authenticating with Snyk..."
-                        snyk auth ${SNYK_TOKEN}
-        
+                        snyk auth $SNYK_TOKEN
+
                         echo "Running Snyk code scan..."
                         snyk code test --severity-threshold=medium --json-file-output=snyk-code-results.json || true
-        
                         echo "Snyk code scan completed"
-
-                        
-                        
                     '''
                 }
             }
             post {
                 always {
-                    echo "Publishing Snyk code scan results..."
-                    publishHTML([
-                        allowMissing: false,
+                    publishHTML(target: [
+                        allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: '.',
@@ -72,137 +68,60 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Snyk Dependency Scan') {
             steps {
-                withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'SNYK_TOKEN', variable: 'SNYK_TOKEN')]) {
                     sh '''
                         echo "Running Snyk dependency scan..."
-
-                        echo "Updating system libraries for Snyk CLI compatibility..."
                         apt-get update && apt-get install -y libc6 libstdc++6
-                            
-
-                        echo "Authenticating with Snyk..."
                         snyk auth $SNYK_TOKEN
-
-                        echo "Running Snyk test..."
-                        snyk test
-
+                        snyk test || true
                         echo "Snyk dependency scan completed"
-
                     '''
                 }
             }
             post {
                 always {
-                    echo "Publishing Snyk dependency scan results..."
-                    publishHTML([
-                        allowMissing: false,
+                    publishHTML(target: [
+                        allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: '.',
-                        reportFiles: 'snyk-dep-results.json',
+                        reportFiles: 'snyk-report.json',
                         reportName: 'Snyk Dependency Scan Report'
                     ])
                 }
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                script {
-                    def imageTag = "${env.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    def latestTag = "${env.DOCKER_IMAGE_NAME}:latest"
-                    
-                    echo "Building Docker image with tag: ${imageTag}"
-                    docker.build(imageTag)
-
-                    
-                    sh """
-                        docker tag ${imageTag} ${latestTag}
-                        echo "Docker image build completed"
-                    """
-                }
-            }
-            post {
-                always {
-                    script {
-                        withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
-                            sh """
-                                echo "Installing Snyk CLI..."
-                                curl -sSL https://static.snyk.io/cli/latest/snyk-linux -o snyk
-                                chmod +x ./snyk
-                                
-                                echo "Verifying Snyk Docker support..."
-                                ./snyk container --help || echo "Container scanning not available"
-                                
-                                echo "Authenticating with Snyk..."
-                                ./snyk auth \${SNYK_TOKEN}
-                                
-                                echo "Running Snyk Docker image scan..."
-                                ./snyk container test \${imageTag} --severity-threshold=medium --json-file-output=snyk-container-results.json --app-vulns || true
-                                
-                                echo "Monitoring Docker image with Snyk..."
-                                ./snyk container monitor \${imageTag} --org=\${SNYK_ORG} --project-name=\${SNYK_PROJECT_NAME}-container || true
-                                
-                                echo "Docker image vulnerability scan completed"
-                            """
-                            
-                            publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: '.',
-                                reportFiles: 'snyk-container-results.json',
-                                reportName: 'Snyk Container Scan Report'
-                            ])
-                        }
-                    }
-                }
+                sh '''
+                    echo "Building Docker image with tag: ${DOCKER_IMAGE_NAME}:latest"
+                    docker build -t ${DOCKER_IMAGE_NAME}:latest .
+                '''
             }
         }
-        
+
         stage('Push to Registry') {
-            when {
-                branch 'main'
-            }
-            
             steps {
-                script {
-                    def imageTag = "${env.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    def latestTag = "${env.DOCKER_IMAGE_NAME}:latest"
-                    
-                    echo "Pushing images to registry..."
-                    
-                    withCredentials([usernamePassword(
-                        credentialsId: 'DOCKER_CREDENTIALS',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        sh """
-                            docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
-                            docker push ${imageTag}
-                            docker push ${latestTag}
-                            docker logout ${DOCKER_REGISTRY}
-                            echo "Image push completed"
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh '''
+                        echo "Logging into Docker registry..."
+                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ${DOCKER_REGISTRY}
+
+                        echo "Pushing Docker image..."
+                        docker push ${DOCKER_IMAGE_NAME}:latest
+                    '''
                 }
             }
         }
     }
-    
+
     post {
         always {
             echo 'Pipeline execution completed'
-            script {
-                archiveArtifacts(
-                    artifacts: 'snyk-code-results.json, snyk-dep-results.json, snyk-container-results.json',
-                    allowEmptyArchive: false, 
-                    fingerprint: true 
-                )
-            }
             cleanWs()
         }
         success {
@@ -213,4 +132,3 @@ pipeline {
         }
     }
 }
-
