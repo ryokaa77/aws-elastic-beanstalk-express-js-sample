@@ -112,13 +112,14 @@ pipeline {
         stage('Push to Registry') {
             steps {
                 script {
-                    // 使用 Jenkins docker.withRegistry API 推送镜像
+                  
                     docker.withRegistry("https://${DOCKER_REGISTRY}", 'dockerhub-credentials') {
                         docker.image("${DOCKER_IMAGE_NAME}:latest").push()
                     }
                 }
             }
         }
+    }
 
     post {
         always {
@@ -133,4 +134,4 @@ pipeline {
         }
     }
 }
-}
+
