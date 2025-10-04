@@ -50,9 +50,6 @@ pipeline {
                 sh """
                     set -e
 
-                    echo '=== Node Version ===' | tee -a ${LOG_DIR}/install.log
-                    node -v
-                    npm -v
                     
                     echo '=== Install Dependencies ===' | tee -a ${LOG_DIR}/install.log
                     npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
@@ -66,11 +63,9 @@ pipeline {
 
                     echo '=== Install Docker CLI ===' | tee -a ${LOG_DIR}/docker.log
                     apt-get update -qq && apt-get install -y -qq docker.io
-                    docker --version | tee -a ${LOG_DIR}/docker.log
+                    docker --version 
 
 
-                    echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
-                    docker build -t ${DOCKER_TAG_BUILD} -t ${DOCKER_TAG_LATEST} . 2>&1 | tee -a ${LOG_DIR}/docker.log
                 """
             }
         }
@@ -123,18 +118,32 @@ pipeline {
             }
         }
 
-        // stage('Build Docker Image') {
-        //     steps {
-        //         sh """
-        //             set -e
-        //             echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
-        //             docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
-        //             echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
-        //         """
-        //     }
-        // }
+        stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'node:16-bullseye'
+                    reuseNode true
+                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
+                }
+            }
+            steps {
+                sh """
+                    set -e
+                    echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
+                    docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
+                    echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
+                """
+            }
+        }
 
         stage('Push Docker Image') {
+            agent {
+                docker {
+                    image 'node:16-bullseye'
+                    reuseNode true
+                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
+                }
+            }
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'DOCKER_CREDENTIALS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
