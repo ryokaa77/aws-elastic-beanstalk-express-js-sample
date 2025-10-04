@@ -128,6 +128,7 @@ pipeline {
                         ' ${REPORT_DIR}/dep-report.json | tee -a ${LOG_DIR}/snyk.log
 
                         echo -e "\\n=== Snyk Scan Done ===" | tee -a ${LOG_DIR}/snyk.log
+                    """
                 }
             }
         }
