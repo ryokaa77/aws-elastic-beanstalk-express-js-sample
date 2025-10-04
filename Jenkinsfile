@@ -110,15 +110,10 @@ pipeline {
         }
 
         stage('Push to Registry') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh '''
-                        echo "Logging into Docker registry..."
-                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ${DOCKER_REGISTRY}
-
-                        echo "Pushing Docker image..."
-                        docker push ${DOCKER_IMAGE_NAME}:latest
-                    '''
+            script {
+               
+                docker.withRegistry("https://${DOCKER_REGISTRY}", 'dockerhub-credentials') {
+                    docker.image("${DOCKER_IMAGE_NAME}:latest").push()
                 }
             }
         }
