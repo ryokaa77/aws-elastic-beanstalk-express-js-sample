@@ -61,8 +61,7 @@ pipeline {
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
 
-                    echo '=== Install Docker CLI ===' | tee -a ${LOG_DIR}/docker.log
-                    apt-get update -qq && apt-get install -y -qq docker.io
+                    echo '=== Docker version ===' | tee -a ${LOG_DIR}/docker.log
                     docker --version 
 
 
@@ -74,7 +73,8 @@ pipeline {
             agent {
                 docker { 
                     image 'node:16-bullseye'
-                    reuseNode true
+                     reuseNode true
+                     args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
                 }
             }
             steps {
