@@ -26,7 +26,7 @@ pipeline {
 
         stage('Install Dependencies & Test (Node 16)') {
             agent {
-                docker { image 'node:16-bullseye' } // 无需 root，默认用户运行
+                docker { image 'node:16-bullseye' } 
             }
             steps {
                 echo '=== Install Dependencies & Test ==='
@@ -55,7 +55,7 @@ pipeline {
                         mkdir -p ${LOG_DIR} ${REPORT_DIR}
                         echo '=== Snyk Code Scan ===' | tee -a ${LOG_DIR}/snyk-code.log
 
-                        # 安装 curl 并下载 Snyk 到用户可写路径（非 root）
+                     
                         apt-get update && apt-get install -y curl 2>&1 | tee -a ${LOG_DIR}/snyk-code.log
                         ARCH=\$(uname -m)
                         if [ "\$ARCH" = "x86_64" ]; then
@@ -83,7 +83,7 @@ pipeline {
                         mkdir -p ${LOG_DIR} ${REPORT_DIR}
                         echo '=== Snyk Dependency Scan ===' | tee -a ${LOG_DIR}/snyk-deps.log
 
-                        # 安装依赖工具并下载 Snyk
+                       
                         apt-get update && apt-get install -y curl 2>&1 | tee -a ${LOG_DIR}/snyk-deps.log
                         ARCH=\$(uname -m)
                         if [ "\$ARCH" = "x86_64" ]; then
@@ -94,7 +94,7 @@ pipeline {
                         chmod +x ~/snyk
                         ~/snyk --version | tee -a ${LOG_DIR}/snyk-deps.log
 
-                        # 安装项目依赖（Snyk 扫描需要 node_modules）
+                        
                         npm install --save 2>&1 | tee -a ${LOG_DIR}/snyk-deps.log
                         ~/snyk auth \$SNYK_TOKEN | tee -a ${LOG_DIR}/snyk-deps.log
                         ~/snyk test --severity-threshold=medium --json-file-output=${REPORT_DIR}/snyk-report.json 2>&1 | tee -a ${LOG_DIR}/snyk-deps.log || true
@@ -108,9 +108,9 @@ pipeline {
                 sh """
                     mkdir -p ${LOG_DIR}
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker-build.log
-                    # 同时构建 latest 和带构建号的标签
+                  
                     docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker-build.log
-                    echo 'Docker 镜像构建完成（标签：${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}）' | tee -a ${LOG_DIR}/docker-build.log
+                    echo 'Docker image completed（Tag：${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}）' | tee -a ${LOG_DIR}/docker-build.log
                 """
             }
         }
@@ -119,19 +119,19 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
+                        credentialsId: 'DOCKER_CREDENTIALS',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
                         sh """
                             mkdir -p ${LOG_DIR}
                             echo '=== Docker Push ===' | tee -a ${LOG_DIR}/docker-push.log
-                            # 登录、推送双标签、登出，所有步骤日志化
+                          
                             docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS} 2>&1 | tee -a ${LOG_DIR}/docker-push.log
                             docker push ${DOCKER_TAG_LATEST} 2>&1 | tee -a ${LOG_DIR}/docker-push.log
                             docker push ${DOCKER_TAG_BUILD} 2>&1 | tee -a ${LOG_DIR}/docker-push.log
                             docker logout ${DOCKER_REGISTRY} 2>&1 | tee -a ${LOG_DIR}/docker-push.log
-                            echo 'Docker 镜像推送完成' | tee -a ${LOG_DIR}/docker-push.log
+                            echo 'Docker push success' | tee -a ${LOG_DIR}/docker-push.log
                         """
                     }
                 }
@@ -141,16 +141,15 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline 执行完成'
-            // 归档所有日志和报告（允许空归档，避免无产物时构建失败）
+            echo 'Pipeline completed'
             archiveArtifacts artifacts: "${env.LOG_DIR}/**/*, ${env.REPORT_DIR}/**/*", allowEmptyArchive: true
             cleanWs() // 清理工作空间
         }
         success {
-            echo 'Pipeline 执行成功！'
+            echo 'Pipeline success！'
         }
         failure {
-            echo 'Pipeline 执行失败！'
+            echo 'Pipeline fail！'
         }
     }
 }
