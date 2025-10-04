@@ -120,7 +120,7 @@ pipeline {
                             | .medium = (.medium // 0)
                             | .low = (.low // 0)
                             | "Critical: \\\(.critical) | High: \\\(.high) | Medium: \\\(.medium) | Low: \\\(.low)",
-                              "Total vulnerabilities: \(.critical + .high + .medium + .low)"
+                              "Total vulnerabilities: \\\(.critical + .high + .medium + .low)"
                         ' ${REPORT_DIR}/snyk-code-report.json | tee -a ${LOG_DIR}/snyk-scan.log
         
                         # --------------------------
