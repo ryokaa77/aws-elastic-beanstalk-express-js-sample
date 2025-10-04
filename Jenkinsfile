@@ -91,64 +91,43 @@ pipeline {
                     sh """
                         set -e
                         mkdir -p ${REPORT_DIR} ${LOG_DIR}
-                        echo '=== Starting Snyk Scans ===' | tee -a ${LOG_DIR}/snyk-scan.log
+                        echo '=== Snyk Scan Started ===' | tee -a ${LOG_DIR}/snyk.log
         
-                        # Install required tools
+                        # Install tools
                         apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
         
-                        # Download Snyk CLI (architecture-aware)
+                        # Get Snyk CLI (architecture-aware)
                         ARCH=\$(uname -m)
                         if [ "\$ARCH" = "aarch64" ]; then
                             SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux-arm64"
                         else
                             SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux"
                         fi
-                        
-                        curl -fsSL -o ~/snyk \$SNYK_URL
-                        chmod +x ~/snyk
-                        ~/snyk auth \$SNYK_TOKEN > /dev/null 2>&1
+                        curl -fsSL -o ~/snyk "\$SNYK_URL" && chmod +x ~/snyk
+                        ~/snyk auth "\$SNYK_TOKEN" > /dev/null 2>&1
         
-                        # --------------------------
-                        # 1. Snyk Code Scan (source code vulnerabilities)
-                        # --------------------------
-                        echo -e "\\n=== Snyk Code Scan Results ===" | tee -a ${LOG_DIR}/snyk-scan.log
-                        ~/snyk code test --json > ${REPORT_DIR}/snyk-code-report.json 2>&1 | tee -a ${LOG_DIR}/snyk-scan.log || true
-        
-                        echo -e "\\n[Code Vulnerabilities Summary]" | tee -a ${LOG_DIR}/snyk-scan.log
+                         # --------------------------
+                         # 1. Snyk Code Scan (source code vulnerabilities)
+                         # --------------------------
+                        echo -e "\\n[Code Scans]" | tee -a ${LOG_DIR}/snyk.log
+                        ~/snyk code test --json > ${REPORT_DIR}/code-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
                         jq -r '
-                            .vulnerabilities 
-                            | group_by(.severity) 
-                            | map({(.[0].severity): length}) 
-                            | add 
-                            | .critical = (.critical // 0)
-                            | .high = (.high // 0)
-                            | .medium = (.medium // 0)
-                            | .low = (.low // 0)
-                            | "Critical: \\(.critical) | High: \\(.high) | Medium: \\(.medium) | Low: \\(.low)",
-                              "Total vulnerabilities: \\(.critical + .high + .medium + .low)"
-                        ' ${REPORT_DIR}/snyk-code-report.json | tee -a ${LOG_DIR}/snyk-scan.log
+                            .vulnerabilities | group_by(.severity) | map({(.[0].severity): length}) | add
+                            | "Crit: \\\(.critical//0) | High: \\\(.high//0) | Med: \\\(.medium//0) | Low: \\\(.low//0) | Total: \\\((.critical//0)+(.high//0)+(.medium//0)+(.low//0))"
+                        ' ${REPORT_DIR}/code-report.json | tee -a ${LOG_DIR}/snyk.log
         
-                        # --------------------------
-                        # 2. Snyk Dependency Scan (third-party package vulnerabilities)
-                        # --------------------------
-                        echo -e "\\n=== Snyk Dependency Scan Results ===" | tee -a ${LOG_DIR}/snyk-scan.log
-                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk-scan.log || true
-        
-                        echo -e "\\n[Dependency Vulnerabilities Summary (Medium+)]" | tee -a ${LOG_DIR}/snyk-scan.log
+                      
+                         # --------------------------
+                         #  2. Dependency vulnerabilities (Medium+)
+                         # --------------------------
+                        echo -e "\\n[Dependency Scans (Medium+)]" | tee -a ${LOG_DIR}/snyk.log
+                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
                         jq -r '
-                            .vulnerabilities 
-                            | group_by(.severity) 
-                            | map({(.[0].severity): length}) 
-                            | add 
-                            | .critical = (.critical // 0)
-                            | .high = (.high // 0)
-                            | .medium = (.medium // 0)
-                            | "Critical: \\(.critical) | High: \\(.high) | Medium: \\(.medium)",
-                              "Total (Medium+): \\(.critical + .high + .medium)"
-                        ' ${REPORT_DIR}/snyk-dep-report.json | tee -a ${LOG_DIR}/snyk-scan.log
+                            .vulnerabilities | group_by(.severity) | map({(.[0].severity): length}) | add
+                            | "Crit: \\\(.critical//0) | High: \\\(.high//0) | Med: \\\(.medium//0) | Total: \\\((.critical//0)+(.high//0)+(.medium//0))"
+                        ' ${REPORT_DIR}/dep-report.json | tee -a ${LOG_DIR}/snyk.log
         
-                        echo -e "\\n=== Snyk Scans Completed ===" | tee -a ${LOG_DIR}/snyk-scan.log
-                    """
+                        echo -e "\\n=== Snyk Scan Done ===" | tee -a ${LOG_DIR}/snyk.log
                 }
             }
         }
