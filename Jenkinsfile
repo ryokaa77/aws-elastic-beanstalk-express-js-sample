@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.2-cli-node16'
+            image 'node:16-bullseye'
         }
     }
 
@@ -100,6 +100,7 @@ pipeline {
         }
 
         stage('Build Docker Image') {
+            agent any
             steps {
                 script {
                 
@@ -109,6 +110,7 @@ pipeline {
         }
 
         stage('Push to Registry') {
+            agent any
             steps {
                 script {
                   
