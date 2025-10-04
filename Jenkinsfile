@@ -14,6 +14,7 @@ pipeline {
         REPORT_DIR = 'reports'
         DOCKER_TAG_LATEST = "${DOCKER_IMAGE_NAME}:latest"
         DOCKER_TAG_BUILD = "${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}" 
+    }
 
     stages {
         stage('Prepare Workspace') {
@@ -142,5 +143,4 @@ pipeline {
         success { echo 'Pipeline success!' }
         failure { echo 'Pipeline failed!' }
     }
-}
 }
