@@ -90,49 +90,59 @@ pipeline {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
                     sh """
                         set -e
-                        echo '=== Snyk Setup ==='
-                        # 1. 提前创建reports目录，避免Snyk无法写入报告
-                        mkdir -p ${REPORT_DIR}
-                        # 2. 安装curl和jq（jq用于解析JSON）
+                        mkdir -p ${REPORT_DIR} ${LOG_DIR}
+                        echo '=== Starting Snyk Scans ===' | tee -a ${LOG_DIR}/snyk-scan.log
+        
+                        # Install required tools
                         apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
-                        
-                        # 3. 下载Snyk（适配aarch64架构）
+        
+                        # Download Snyk CLI (architecture-aware)
                         ARCH=\$(uname -m)
-                        if [ "\$ARCH" = "x86_64" ]; then
-                            SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux
-                        else
-                            SNYK_URL=https://static.snyk.io/cli/latest/snyk-linux-arm64
-                        fi
-                        curl -Lo ~/snyk \$SNYK_URL
+                        SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux\${ARCH == "aarch64" ? "-arm64" : ""}"
+                        curl -fsSL -o ~/snyk \$SNYK_URL
                         chmod +x ~/snyk
-                        ~/snyk --version > /dev/null
-                        
-                        # 4. 登录Snyk
-                        ~/snyk auth \$SNYK_TOKEN > /dev/null
-    
-                        # 5. Snyk Code测试：添加--json参数强制生成JSON报告
-                        echo '=== Snyk Code Test ==='
-                        ~/snyk code test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-code-results.json 2>&1 | tee ${LOG_DIR}/snyk-code.log || true
-            
-                        # 6. 解析报告（若文件缺失，兜底提示）
-                        echo "=== Snyk Code Test Summary ==="
-                        if [ -f "${REPORT_DIR}/snyk-code-results.json" ]; then
-                            jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-code-results.json || echo "No vulnerabilities found"
-                        else
-                            echo "No vulnerabilities found (report file not generated)"
-                        fi
-            
-                        # 7. Snyk依赖测试
-                        echo '=== Snyk Dependency Test ==='
-                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-report.json 2>&1 | tee ${LOG_DIR}/snyk-dependency.log || true
-            
-                        # 8. 解析依赖报告
-                        echo "=== Snyk Dependency Test Summary ==="
-                        if [ -f "${REPORT_DIR}/snyk-report.json" ]; then
-                            jq -r '[.vulnerabilities[].severity] | group_by(.) | map({(.[0]): length}) | add' ${REPORT_DIR}/snyk-report.json || echo "No vulnerabilities found"
-                        else
-                            echo "No vulnerabilities found (report file not generated)"
-                        fi
+                        ~/snyk auth \$SNYK_TOKEN > /dev/null 2>&1
+        
+                        # --------------------------
+                        # 1. Snyk Code Scan (source code vulnerabilities)
+                        # --------------------------
+                        echo -e "\\n=== Snyk Code Scan Results ===" | tee -a ${LOG_DIR}/snyk-scan.log
+                        ~/snyk code test --json > ${REPORT_DIR}/snyk-code-report.json 2>&1 | tee -a ${LOG_DIR}/snyk-scan.log || true
+        
+                        echo -e "\\n[Code Vulnerabilities Summary]" | tee -a ${LOG_DIR}/snyk-scan.log
+                        jq -r '
+                            .vulnerabilities 
+                            | group_by(.severity) 
+                            | map({(.[0].severity): length}) 
+                            | add 
+                            | .critical = (.critical // 0)
+                            | .high = (.high // 0)
+                            | .medium = (.medium // 0)
+                            | .low = (.low // 0)
+                            | "Critical: \(.critical) | High: \(.high) | Medium: \(.medium) | Low: \(.low)",
+                              "Total vulnerabilities: \(.critical + .high + .medium + .low)"
+                        ' ${REPORT_DIR}/snyk-code-report.json | tee -a ${LOG_DIR}/snyk-scan.log
+        
+                        # --------------------------
+                        # 2. Snyk Dependency Scan (third-party package vulnerabilities)
+                        # --------------------------
+                        echo -e "\\n=== Snyk Dependency Scan Results ===" | tee -a ${LOG_DIR}/snyk-scan.log
+                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/snyk-dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk-scan.log || true
+        
+                        echo -e "\\n[Dependency Vulnerabilities Summary (Medium+)]" | tee -a ${LOG_DIR}/snyk-scan.log
+                        jq -r '
+                            .vulnerabilities 
+                            | group_by(.severity) 
+                            | map({(.[0].severity): length}) 
+                            | add 
+                            | .critical = (.critical // 0)
+                            | .high = (.high // 0)
+                            | .medium = (.medium // 0)
+                            | "Critical: \(.critical) | High: \(.high) | Medium: \(.medium)",
+                              "Total (Medium+): \(.critical + .high + .medium)"
+                        ' ${REPORT_DIR}/snyk-dep-report.json | tee -a ${LOG_DIR}/snyk-scan.log
+        
+                        echo -e "\\n=== Snyk Scans Completed ===" | tee -a ${LOG_DIR}/snyk-scan.log
                     """
                 }
             }
