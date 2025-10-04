@@ -61,8 +61,15 @@ pipeline {
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
 
-                    echo '=== Docker version ===' | tee -a ${LOG_DIR}/docker.log
-                    docker --version 
+                    # 关键新增：在node容器内安装Docker客户端
+                    echo '=== Install Docker Client ===' | tee -a logs/docker.log
+                    apt-get update -qq && apt-get install -y -qq curl lsb-release software-properties-common > /dev/null 2>&1
+                    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg > /dev/null 2>&1
+                    echo "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable" | tee /etc/apt/sources.list.d/docker.list
+                    apt-get update -qq && apt-get install -y -qq docker-ce-cli > /dev/null 2>&1
+                    
+                    echo '=== Docker version ===' | tee -a logs/docker.log
+                    docker --version | tee -a logs/docker.log
 
 
                 """
