@@ -6,6 +6,9 @@ pipeline {
     }
 
     environment {
+        DOCKER_HOST = 'tcp://docker:2376'
+        DOCKER_CERT_PATH = '/certs/client'
+        DOCKER_TLS_VERIFY = '1'
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
         DOCKER_REGISTRY = 'docker.io'
         SNYK_ORG = 'ryokaa77'
@@ -35,8 +38,11 @@ pipeline {
         stage('Install & Test') {
             agent {
                 docker { 
-                    image 'node:16-bullseye' 
-                    reuseNode true
+                    // image 'node:16-bullseye' 
+                    // reuseNode true
+                     image 'node:16-bullseye'
+                     reuseNode true
+                     args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
                        
                 } 
             }
@@ -52,6 +58,12 @@ pipeline {
                     else
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
+
+                    echo '=== Checking Docker ===' | tee -a ${LOG_DIR}/docker.log
+                    docker version | tee -a ${LOG_DIR}/docker.log
+
+                    echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
+                    docker build -t ${DOCKER_TAG_BUILD} -t ${DOCKER_TAG_LATEST} . 2>&1 | tee -a ${LOG_DIR}/docker.log
                 """
             }
         }
@@ -104,16 +116,16 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                sh """
-                    set -e
-                    echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
-                    docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
-                    echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
-                """
-            }
-        }
+        // stage('Build Docker Image') {
+        //     steps {
+        //         sh """
+        //             set -e
+        //             echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
+        //             docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
+        //             echo 'Docker image built: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}' | tee -a ${LOG_DIR}/docker.log
+        //         """
+        //     }
+        // }
 
         stage('Push Docker Image') {
             steps {
