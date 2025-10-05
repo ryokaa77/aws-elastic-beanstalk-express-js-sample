@@ -110,12 +110,15 @@ pipeline {
                          # --------------------------
                          #  2. Dependency vulnerabilities (Medium+)
                          # --------------------------
-                        echo -e "\\n[Dependency Scans (Medium+)]" | tee -a ${LOG_DIR}/snyk.log
-                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log || true
-                        jq -r '
-                            .vulnerabilities // [] | group_by(.severity) | map({(.[0].severity): length}) | add
-                            | "Crit: \\(.critical//0) | High: \\(.high//0) | Med: \\(.medium//0) | Total: \\((.critical//0)+(.high//0)+(.medium//0))"
-                        ' ${REPORT_DIR}/dep-report.json | tee -a ${LOG_DIR}/snyk.log
+                        echo -e "\\n[Dependency Scans]" | tee -a ${LOG_DIR}/snyk.log
+                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log
+        
+                        # pipeline fail on High/Critical
+                        HIGH_CRITICAL=$(jq '[.vulnerabilities[] | select(.severity=="high" or .severity=="critical")] | length' ${REPORT_DIR}/dep-report.json)
+                        if [ "$HIGH_CRITICAL" -gt 0 ]; then
+                            echo "High/Critical vulnerabilities found: $HIGH_CRITICAL. Failing pipeline."
+                            exit 1
+                        fi
 
                         echo -e "\\n=== Snyk Scan Done ===" | tee -a ${LOG_DIR}/snyk.log
                     """
