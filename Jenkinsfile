@@ -39,8 +39,6 @@ pipeline {
         stage('Install & Test & Docker Build') {
             agent {
                 docker { 
-                    // image 'node:16-bullseye' 
-                    // reuseNode true
                      image 'node:16-bullseye'
                      reuseNode true
                      args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
@@ -75,6 +73,8 @@ pipeline {
 
 
                 """
+
+                junit allowEmptyResults: true, testResults: '**/junit*.xml'
             }
         }
 
