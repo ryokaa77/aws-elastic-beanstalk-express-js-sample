@@ -1,19 +1,8 @@
 const request = require('supertest');
-const app = require('../app');
-
-let server;
-
-beforeAll(() => {
-  server = app.listen(8080); 
-});
-
-afterAll((done) => {
-  server.close(done); 
-});
 
 describe('GET /', () => {
   it('should return 200 OK', async () => {
-    const res = await request(server).get('/'); // 传入 server 而不是 app
+    const res = await request('http://localhost:8080').get('/'); // 直接访问本地端口
     expect(res.statusCode).toBe(200);
   });
 });
