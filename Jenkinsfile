@@ -54,6 +54,7 @@ pipeline {
                         set -e
                         
                         echo '=== Snyk Scan Started ==='
+                        export PATH=$PATH:/usr/local/bin
 
                         snyk auth "$SNYK_TOKEN"
 
