@@ -39,7 +39,7 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Installing Dependencies ===' | tee -a ${LOG_DIR}/install.log
+                    echo '=== Installing Dependencies ===' >> ${LOG_DIR}/install.log
                     npm install 2>&1 | tee -a ${LOG_DIR}/install.log
                 """
             }
@@ -57,9 +57,9 @@ pipeline {
                 sh """
                     set -e
                     echo '=== Running Tests ===' | tee -a ${LOG_DIR}/test.log
-                    npx jest --ci --reporters=default --reporters=jest-junit 2>&1 | tee -a ${LOG_DIR}/test.log
-                    echo '=== JUnit XML Files ===' | tee -a ${LOG_DIR}/test.log
-                    ls -l reports/junit | tee -a ${LOG_DIR}/test.log
+                    npx jest --ci --reporters=default --reporters=jest-junit 2>&1 >> ${LOG_DIR}/test.log
+                    echo '=== JUnit XML Files ===' >> ${LOG_DIR}/test.log
+                    ls -l reports/junit >> ${LOG_DIR}/test.log
                 """
                 junit allowEmptyResults: true, testResults: 'reports/junit/junit.xml'
             }
@@ -78,7 +78,7 @@ pipeline {
                     sh '''
                         set -e
                         mkdir -p ${REPORT_DIR} ${LOG_DIR}
-                        echo '=== Snyk Scan Started ===' | tee -a ${LOG_DIR}/snyk.log
+                        echo '=== Snyk Scan Started ===' >> ${LOG_DIR}/snyk.log
 
                         # Install tools
                         apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
@@ -94,8 +94,8 @@ pipeline {
                         ~/snyk auth "$SNYK_TOKEN" > /dev/null 2>&1
 
                         # Dependency scan
-                        echo -e "\\n[Dependency Scans]" | tee -a ${LOG_DIR}/snyk.log
-                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 | tee -a ${LOG_DIR}/snyk.log
+                        echo -e "\\n[Dependency Scans]" >> ${LOG_DIR}/snyk.log
+                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/dep-report.json 2>&1 >> ${LOG_DIR}/snyk.log
 
                         HIGH_CRITICAL=$(jq '[.vulnerabilities[] | select(.severity=="high" or .severity=="critical")] | length' ${REPORT_DIR}/dep-report.json)
                         if [ "$HIGH_CRITICAL" -gt 0 ]; then
@@ -103,7 +103,7 @@ pipeline {
                             exit 1
                         fi
 
-                        echo '=== Snyk Scan Done ===' | tee -a ${LOG_DIR}/snyk.log
+                        echo '=== Snyk Scan Done ===' >> ${LOG_DIR}/snyk.log
                     '''
                 }
             }
@@ -218,7 +218,7 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Install Docker Client (Auto-Arch) ===' | tee -a ${LOG_DIR}/docker.log
+                    echo '=== Install Docker Client (Auto-Arch) ===' >> ${LOG_DIR}/docker.log
                     
                     apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
                     curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
@@ -232,7 +232,7 @@ pipeline {
                         exit 1
                     fi
                     docker build -t ${DOCKER_TAG_LATEST} -t ${DOCKER_TAG_BUILD} . 2>&1 | tee -a ${LOG_DIR}/docker.log
-                    echo "Built images: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}" | tee -a ${LOG_DIR}/docker.log
+                    echo "Built images: ${DOCKER_TAG_LATEST}, ${DOCKER_TAG_BUILD}" >> ${LOG_DIR}/docker.log
                 """
             }
         }
@@ -255,7 +255,7 @@ pipeline {
                             docker push ${DOCKER_TAG_LATEST} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker push ${DOCKER_TAG_BUILD} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker logout ${DOCKER_REGISTRY} 2>&1 | tee -a ${LOG_DIR}/docker.log
-                            echo 'Docker push success' | tee -a ${LOG_DIR}/docker.log
+                            echo 'Docker push success' >> ${LOG_DIR}/docker.log
                         """
                     }
                 }
