@@ -22,8 +22,8 @@ pipeline {
         stage('Prepare Workspace') {
             steps {
                 sh """
-                    echo '=== Workspace Prepared ===' | tee -a ${LOG_DIR}/pipeline.log
                     mkdir -p ${LOG_DIR} ${REPORT_DIR}
+                    echo '=== Workspace Prepared ===' | tee -a ${LOG_DIR}/pipeline.log 
                 """
             }
         }
