@@ -11,8 +11,6 @@ pipeline {
         DOCKER_TLS_VERIFY = '1'
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
         DOCKER_REGISTRY = 'docker.io'
-        SNYK_ORG = 'ryokaa77'
-        SNYK_PROJECT_NAME = 'express-js-sample'
         LOG_DIR = 'logs'
         REPORT_DIR = 'reports'
         DOCKER_TAG_LATEST = "${DOCKER_IMAGE_NAME}:latest"
@@ -24,13 +22,8 @@ pipeline {
         stage('Prepare Workspace') {
             steps {
                 sh """
-                    mkdir -p ${LOG_DIR} ${REPORT_DIR}
                     echo '=== Workspace Prepared ===' | tee -a ${LOG_DIR}/pipeline.log
-
-                    echo '=== Git Information ===' | tee -a ${LOG_DIR}/checkout.log
-                    echo "Branch: ${GIT_BRANCH}" | tee -a ${LOG_DIR}/checkout.log
-                    echo "Commit: ${GIT_COMMIT}" | tee -a ${LOG_DIR}/checkout.log
-                    git log -1 --pretty=format:'%h - %an, %ar : %s' | tee -a ${LOG_DIR}/checkout.log
+                    mkdir -p ${LOG_DIR} ${REPORT_DIR}
                 """
             }
         }
@@ -54,20 +47,19 @@ pipeline {
                     npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
 
                     echo '=== Run Tests ===' | tee -a ${LOG_DIR}/test.log
-                    if npm run test -- --help > /dev/null 2>&1; then
+                    if npm run test > /dev/null 2>&1; then
                         npm test 2>&1 | tee -a ${LOG_DIR}/test.log
                     else
                         echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
                     fi
 
-                    # 3. 关键修改：用Docker官方脚本安装客户端（替代手动源配置）
+                    
                     echo '=== Install Docker Client via Official Script ===' | tee -a logs/docker.log
-                    # 安装curl（确保容器内有curl工具）
+                   
                     apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
-                    # 下载并执行官方脚本，--client-only仅安装客户端（不装守护进程）
+                    
                     curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
-                    # 4. 验证Docker安装
                     echo '=== Docker version ===' | tee -a logs/docker.log
                     docker --version 2>&1 | tee -a logs/docker.log
 
@@ -145,16 +137,14 @@ pipeline {
                 sh """
                     set -e
                     echo '=== Install Docker Client (Auto-Arch) ===' | tee -a ${LOG_DIR}/docker.log
-                    # 关键修复：（自动适配aarch64/amd64）
+                    
                     apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
                     curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
-                    # 验证Docker安装
                     docker --version 2>&1 | tee -a ${LOG_DIR}/docker.log
                     
-                    # 构建Docker镜像
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
-                    # 确保Dockerfile存在（避免构建失败）
+                  
                     if [ ! -f "Dockerfile" ]; then
                         echo "Error: Dockerfile not found!" | tee -a ${LOG_DIR}/docker.log
                         exit 1
