@@ -41,32 +41,30 @@ pipeline {
             steps {
                 sh """
                     set -e
-
-                    
                     echo '=== Install Dependencies ===' | tee -a ${LOG_DIR}/install.log
-                    npm install --save 2>&1 | tee -a ${LOG_DIR}/install.log
-
+                    npm install 2>&1 | tee -a ${LOG_DIR}/install.log
+        
+                    mkdir -p ${REPORT_DIR}/junit
+        
                     echo '=== Run Tests ===' | tee -a ${LOG_DIR}/test.log
-                    if npm run test > /dev/null 2>&1; then
-                        npm test 2>&1 | tee -a ${LOG_DIR}/test.log
-                    else
-                        echo "No tests defined, skipping" | tee -a ${LOG_DIR}/test.log
-                    fi
+                    npx jest --ci --${REPORT_DIR}=default --${REPORT_DIR}=jest-junit 2>&1 | tee -a ${LOG_DIR}/test.log
+        
+                    echo '=== JUnit XML Files ===' | tee -a ${LOG_DIR}/test.log
+                    ls -l ${REPORT_DIR}/junit | tee -a ${LOG_DIR}/test.log
 
-                    
-                    echo '=== Install Docker Client via Official Script ===' | tee -a logs/docker.log
+                    echo '=== Install Docker Client via Official Script ===' | tee -a ${LOG_DIR}/docker.log
                    
                     apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
                     
                     curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
-                    echo '=== Docker version ===' | tee -a logs/docker.log
-                    docker --version 2>&1 | tee -a logs/docker.log
+                    echo '=== Docker version ===' | tee -a ${LOG_DIR}/docker.log
+                    docker --version 2>&1 | tee -a ${LOG_DIR}/docker.log
 
 
                 """
 
-                junit allowEmptyResults: true, testResults: '**/junit*.xml'
+                junit allowEmptyResults: true, testResults: '${REPORT_DIR}/junit/junit.xml'
             }
         }
 
