@@ -32,8 +32,7 @@ pipeline {
             agent {
                 docker { 
                     image 'node:16-bullseye' 
-                    reuseNode true 
-                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                    reuseNode true             
                 }
             }
             steps {
