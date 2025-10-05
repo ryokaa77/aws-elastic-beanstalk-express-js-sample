@@ -39,7 +39,7 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Installing Dependencies ===' >> &{LOG_DIR}/install.log
+                    echo '=== Installing Dependencies ===' >> ${LOG_DIR}/install.log
                     npm install 2>&1 | tee -a ${LOG_DIR}/install.log
                 """
             }
@@ -50,7 +50,7 @@ pipeline {
                 docker { 
                     image 'node:16-bullseye' 
                     reuseNode true 
-                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                    args " -e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
                 }
             }
             steps {
@@ -70,7 +70,7 @@ pipeline {
                 docker { 
                     image 'node:16-bullseye' 
                     reuseNode true 
-                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                    args " -e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
                 }
             }
             steps {
@@ -117,7 +117,7 @@ pipeline {
                 docker {
                     image 'node:16-bullseye'
                     reuseNode true
-                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
+                    args "-v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
                 }
             }
             steps {
@@ -147,7 +147,7 @@ pipeline {
                 docker {
                     image 'node:16-bullseye'
                     reuseNode true
-                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
+                    args "-v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
                 }
             }
             steps {
