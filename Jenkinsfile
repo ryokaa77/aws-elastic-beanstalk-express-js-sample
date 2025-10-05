@@ -156,13 +156,6 @@ pipeline {
                         sh """
                             set -e
 
-                            echo '=== Install Docker ===' 
-                    
-                            apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
-                            curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
-                            docker --version | tee -a ${LOG_DIR}/docker.log
-
-                            
                             echo '=== Docker Push ==='
                             echo "\${DOCKER_PASS}" | docker login ${DOCKER_REGISTRY} -u "\${DOCKER_USER}" --password-stdin 
                             docker push ${DOCKER_TAG_LATEST} 2>&1 | tee -a ${LOG_DIR}/docker.log
