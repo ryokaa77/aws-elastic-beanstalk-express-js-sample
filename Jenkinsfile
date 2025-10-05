@@ -57,11 +57,11 @@ pipeline {
                 sh """
                     set -e
                     echo '=== Running Tests ===' | tee -a ${LOG_DIR}/test.log
-                    npx jest --ci --${REPORT_DIR}=default --${REPORT_DIR}=jest-junit 2>&1 | tee -a ${LOG_DIR}/test.log
+                    npx jest --ci --reporters=default --reporters=jest-junit 2>&1 | tee -a ${LOG_DIR}/test.log
                     echo '=== JUnit XML Files ===' | tee -a ${LOG_DIR}/test.log
-                    ls -l ${REPORT_DIR}/junit | tee -a ${LOG_DIR}/test.log
+                    ls -l reports/junit | tee -a ${LOG_DIR}/test.log
                 """
-                junit allowEmptyResults: true, testResults: '${REPORT_DIR}/junit/junit.xml'
+                junit allowEmptyResults: true, testResults: 'reports/junit/junit.xml'
             }
         }
 
