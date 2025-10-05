@@ -78,7 +78,7 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
-                    sh """
+                    sh '''
                         set -e
                         mkdir -p ${REPORT_DIR} ${LOG_DIR}
                         echo '=== Snyk Scan Started ===' | tee -a ${LOG_DIR}/snyk.log
@@ -121,7 +121,7 @@ pipeline {
                         fi
 
                         echo -e "\\n=== Snyk Scan Done ===" | tee -a ${LOG_DIR}/snyk.log
-                    """
+                    '''
                 }
             }
         }
