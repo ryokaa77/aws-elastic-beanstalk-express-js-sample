@@ -39,7 +39,7 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Installing Dependencies ===' 
+                    echo '=== Installing Dependencies ===' >> &{LOG_DIR}/install.log
                     npm install 2>&1 | tee -a ${LOG_DIR}/install.log
                 """
             }
