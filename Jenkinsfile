@@ -9,13 +9,13 @@ pipeline {
         DOCKER_HOST = 'tcp://docker:2376'
         DOCKER_CERT_PATH = '/certs/client'
         DOCKER_TLS_VERIFY = '1'
+        
         DOCKER_IMAGE_NAME = 'ryokaa77/express-js-sample'
         DOCKER_REGISTRY = 'docker.io'
         LOG_DIR = 'logs'
         REPORT_DIR = 'reports'
         DOCKER_TAG_LATEST = "${DOCKER_IMAGE_NAME}:latest"
         DOCKER_TAG_BUILD = "${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}" 
-        DOCKER_DEB_CODENAME = 'bullseye'
     }
 
     stages {
@@ -123,12 +123,12 @@ pipeline {
             steps {
                 sh """
                     set -e
-                    echo '=== Install Docker Client (Auto-Arch) ===' >> ${LOG_DIR}/docker.log
+                    echo '=== Install Docker CLI ==='
                     
                     apt-get update -qq && apt-get install -y -qq curl > /dev/null 2>&1
                     curl -fsSL https://get.docker.com | sh -s -- --client-only > /dev/null 2>&1
                     
-                    docker --version 2>&1 | tee -a ${LOG_DIR}/docker.log
+                    docker --version
                     
                     echo '=== Docker Build ===' | tee -a ${LOG_DIR}/docker.log
                   
@@ -164,7 +164,7 @@ pipeline {
 
                             
                             echo '=== Docker Push ==='
-                            echo "\${DOCKER_PASS}" | docker login ${DOCKER_REGISTRY} -u "\${DOCKER_USER}" --password-stdin 2>&1 
+                            echo "\${DOCKER_PASS}" | docker login ${DOCKER_REGISTRY} -u "\${DOCKER_USER}" --password-stdin 
                             docker push ${DOCKER_TAG_LATEST} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker push ${DOCKER_TAG_BUILD} 2>&1 | tee -a ${LOG_DIR}/docker.log
                             docker logout ${DOCKER_REGISTRY} 2>&1 | tee -a ${LOG_DIR}/docker.log
