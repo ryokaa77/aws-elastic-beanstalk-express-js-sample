@@ -55,17 +55,6 @@ pipeline {
                         
                         echo '=== Snyk Scan Started ==='
 
-                        # Install tools
-                        apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1
-
-                        # Download Snyk CLI
-                        ARCH=$(uname -m)
-                        if [ "$ARCH" = "aarch64" ]; then
-                            SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux-arm64"
-                        else
-                            SNYK_URL="https://static.snyk.io/cli/latest/snyk-linux"
-                        fi
-                        curl -fsSL -o ~/snyk "$SNYK_URL" && chmod +x ~/snyk
                         ~/snyk auth "$SNYK_TOKEN" > /dev/null 2>&1
 
                         echo "=== Running Snyk Dependency Scan ==="
