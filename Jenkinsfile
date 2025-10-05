@@ -55,10 +55,10 @@ pipeline {
                         
                         echo '=== Snyk Scan Started ==='
 
-                        ~/snyk auth "$SNYK_TOKEN" > /dev/null 2>&1
+                        snyk auth "$SNYK_TOKEN"
 
                         echo "=== Running Snyk Dependency Scan ==="
-                        ~/snyk test --severity-threshold=medium --json > ${REPORT_DIR}/scan/dep-report.json 2>&1
+                        snyk test --severity-threshold=medium --json > ${REPORT_DIR}/scan/dep-report.json || true
 
                         HIGH_CRITICAL=$(jq -r '[.vulnerabilities[] | select(.severity=="high" or .severity=="critical")] | length' ${REPORT_DIR}/scan/dep-report.json)
 
