@@ -30,7 +30,11 @@ pipeline {
 
         stage('Install Dependencies') {
             agent {
-                docker { image 'node:16-bullseye' reuseNode true }
+                docker { 
+                    image 'node:16-bullseye' 
+                    reuseNode true 
+                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                }
             }
             steps {
                 sh """
@@ -43,7 +47,11 @@ pipeline {
 
         stage('Run Tests') {
             agent {
-                docker { image 'node:16-bullseye' reuseNode true }
+                docker { 
+                    image 'node:16-bullseye' 
+                    reuseNode true 
+                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                }
             }
             steps {
                 sh """
@@ -59,7 +67,11 @@ pipeline {
 
         stage('Snyk Scan') {
             agent {
-                docker { image 'node:16-bullseye' reuseNode true }
+                docker { 
+                    image 'node:16-bullseye' 
+                    reuseNode true 
+                    args "-e DOCKER_HOST=${DOCKER_HOST} -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"            
+                }
             }
             steps {
                 withCredentials([string(credentialsId: 'SNYK_CREDENTIALS', variable: 'SNYK_TOKEN')]) {
