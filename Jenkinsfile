@@ -54,7 +54,7 @@ pipeline {
                         set -e
                         
                         echo '=== Snyk Scan Started ==='
-                        export PATH=$PATH:/usr/local/bin
+                        npm install -g snyk
 
                         snyk auth "$SNYK_TOKEN"
 
